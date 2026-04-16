@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>オリジナル学習帳</title>
+<style>
+  body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    padding: 20px;
+    max-width: 800px;
+    margin: auto;
+    background-color: #f4f7f6;
+    color: #333;
+  }
+  h2, h3 {
+    color: #2c3e50;
+  }
+  .editor-box {
+    background: #ffffff;
+    border: 1px solid #e1e8ed;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  }
+  .input-group {
+    margin-bottom: 15px;
+  }
+  .input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+  /* ツールバーの装飾 */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  .toolbar button, .toolbar select {
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid #bbb;
+    background: #fff;
+    border-radius: 4px;
+  }
+  .toolbar button:hover { background: #e9ecef; }
+  .toolbar input[type="color"] {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    height: 30px;
+    width: 30px;
+    padding: 0;
+  }
+  /* 詳細入力エリア（リッチテキスト） */
+  #rich-details {
+    border: 1px solid #ccc;
+    min-height: 120px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-y: auto;
+  }
+  #rich-details:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+  }
+  .action-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .action-btn:hover { background: #2980b9; }
+  .clear-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 10px;
+  }
+  /* リスト部分の装飾 */
+  .list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  .download-btn {
+    padding: 10px 15px;
+    background: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .download-btn:hover { background: #27ae60; }
+  
+  .item {
+    background: #fff;
+    border: 1px solid #ddd;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  }
+  .item-header {
+    padding: 15px;
+    background: #fafbfc;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+  }
+  .item-header:hover {
+    background: #f1f3f5;
+  }
+  .term-title {
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+  .item-details {
+    padding: 20px;
+    display: none;
+    border-top: 1px solid #eee;
+    font-size: 1em;
+    line-height: 1.6;
+  }
+  .controls button {
+    margin-left: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .edit-btn { background: #f39c12; color: white; }
+  .delete-btn { background: #e74c3c; color: white; }
+</style>
+</head>
+<body>
+
+<h2>📝 オリジナル学習帳</h2>
+
+<div class="editor-box">
+  <input type="hidden" id="edit-id">
+  
+  <div class="input-group">
+    <label>見出し（タップする単語・項目）</label>
+    <input type="text" id="term-input" placeholder="例：光合成">
+  </div>
+
+  <div class="input-group">
+    <label>詳細・解説（文字を選択して色や大きさを変えられます）</label>
+    <div class="toolbar">
+      <button onclick="execCmd('bold')"><b>太字</b></button>
+      <input type="color" id="color-picker" onchange="execCmd('foreColor', this.value)" title="文字色を変更">
+      <select onchange="execCmd('fontSize', this.value); this.selectedIndex=0;">
+        <option value="">サイズ変更</option>
+        <option value="3">標準</option>
+        <option value="5">少し大きめ</option>
+        <option value="7">特大</option>
+      </select>
+      <button onclick="execCmd('removeFormat')" title="装飾をクリア">🔄 装飾を解除</button>
+    </div>
+    <div id="rich-details" contenteditable="true" placeholder="ここに詳細を入力してください..."></div>
+  </div>
+
+  <div>
+    <button id="save-btn" class="action-btn" onclick="saveItem()">リストに追加</button>
+    <button class="clear-btn" onclick="clearEditor()">入力をクリア</button>
+  </div>
+</div>
+
+<hr style="border: 0; border-top: 2px dashed #ccc; margin: 30px 0;">
+
+<div class="list-header">
+  <h3>📚 学習リスト</h3>
+  <button class="download-btn" onclick="downloadHTML()">💾 今の状態をダウンロード保存</button>
+</div>
+
+<div id="list-container"></div>
+
+<script id="saved-data" type="application/json">[]</script>
+
+<script>
+  let items = [];
+  const dataScript = document.getElementById('saved-data');
+
+  // 1. ページ読み込み時に保存されたデータを復元
+  try {
+    const loadedData = JSON.parse(dataScript.textContent);
+    if (Array.isArray(loadedData) && loadedData.length > 0) {
+      items = loadedData;
+      renderList();
+    }
+  } catch(e) {
+    console.error("データの読み込みに失敗しました", e);
+  }
+
+  // 2. テキスト装飾用の関数
+  function execCmd(command, value = null) {
+    document.execCommand(command, false, value);
+    document.getElementById('rich-details').focus();
+  }
+
+  // 3. 項目の追加・更新
+  function saveItem() {
+    const term = document.getElementById('term-input').value.trim();
+    const details = document.getElementById('rich-details').innerHTML;
+    const idInput = document.getElementById('edit-id').value;
+
+    if (!term) {
+      alert('見出しを入力してください！');
+      return;
+    }
+
+    if (idInput) {
+      // 既存項目の更新
+      const index = items.findIndex(i => i.id === idInput);
+      if (index > -1) {
+        items[index].term = term;
+        items[index].details = details;
+      }
+    } else {
+      // 新規追加
+      items.push({
+        id: Date.now().toString(),
+        term: term,
+        details: details
+      });
+    }
+
+    clearEditor();
+    renderList();
+  }
+
+  // 4. エディタのクリア
+  function clearEditor() {
+    document.getElementById('edit-id').value = '';
+    document.getElementById('term-input').value = '';
+    document.getElementById('rich-details').innerHTML = '';
+    document.getElementById('save-btn').textContent = 'リストに追加';
+  }
+
+  // 5. 編集モードへ移行
+  function editItem(id, event) {
+    event.stopPropagation(); // クリックしたときに詳細が開くのを防ぐ
+    const item = items.find(i => i.id === id);
+    if (item) {
+      document.getElementById('edit-id').value = item.id;
+      document.getElementById('term-input').value = item.term;
+      document.getElementById('rich-details').innerHTML = item.details;
+      document.getElementById('save-btn').textContent = '更新を保存';
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // 一番上にスクロール
+    }
+  }
+
+  // 6. 削除
+  function deleteItem(id, event) {
+    event.stopPropagation();
+    if (confirm('この項目を本当に削除しますか？')) {
+      items = items.filter(i => i.id !== id);
+      renderList();
+    }
+  }
+
+  // 7. 詳細の開閉（アコーディオン）
+  function toggleDetails(id) {
+    const el = document.getElementById('details-' + id);
+    if (el.style.display === 'none' || el.style.display === '') {
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  // 8. リストを画面に表示＆データをタグに保存
+  function renderList() {
+    const container = document.getElementById('list-container');
+    container.innerHTML = '';
+    
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `
+        <div class="item-header" onclick="toggleDetails('${item.id}')">
+          <div class="term-title">${item.term}</div>
+          <div class="controls">
+            <button class="edit-btn" onclick="editItem('${item.id}', event)">編集</button>
+            <button class="delete-btn" onclick="deleteItem('${item.id}', event)">削除</button>
+          </div>
+        </div>
+        <div id="details-${item.id}" class="item-details">
+          ${item.details}
+        </div>
+      `;
+      container.appendChild(div);
+    });
+
+    // 今のアイテム配列をJSONとして非表示タグに保存（ダウンロード時に状態を引き継ぐため）
+    dataScript.textContent = JSON.stringify(items);
+  }
+
+  // 9. 現在の状態をHTMLファイルとしてダウンロード
+  function downloadHTML() {
+    // 画面の現在のHTML（DOM）をそのまま文字列として取得
+    const htmlContent = '<!DOCTYPE html>\n<html lang="ja">\n' + document.documentElement.innerHTML + '\n</html>';
+    
+    // Blobを使ってファイル化
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // 一時的なリンクを作って自動ダウンロード
+    const a = document.createElement('a');
+    a.href = url;
+    // ダウンロード時のファイル名（日付を入れると整理しやすいです）
+    const dateStr = new Date().toISOString().split('T')[0];
+    a.download = `学習帳_${dateStr}.html`;
+    
+    document.body.appendChild(a);
+    a.click();
+    
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>
